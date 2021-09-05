@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.github.davemeier82.homeautomation.spring.rest.v1.HomeAutomationRestAutoConfiguration
