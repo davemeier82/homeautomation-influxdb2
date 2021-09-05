@@ -35,7 +35,7 @@ public class HomeAutomationInfluxDb2AutoConfiguration {
   InfluxDBClient influxDBClient(@Value("${influxdb2.url}") String url,
                                 @Value("${influxdb2.token}") char[] token,
                                 @Value("${influxdb2.organization}") String organization,
-                                @Value("${influxdb2.url}") String bucket
+                                @Value("${influxdb2.bucket}") String bucket
   ) {
     return InfluxDBClientFactory.create(url, token, organization, bucket);
   }
