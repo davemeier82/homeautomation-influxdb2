@@ -42,8 +42,8 @@ public class HomeAutomationInfluxDb2AutoConfiguration {
 
   @Bean
   @ConditionalOnBean(InfluxDBClient.class)
-  InfluxDb2DeviceStateRepository influxDb2DeviceStateRepository(InfluxDBClient influxDBClient) {
-    return new InfluxDb2DeviceStateRepository(influxDBClient);
+  InfluxDb2DeviceStateRepository influxDb2DeviceStateRepository(InfluxDBClient influxDBClient, @Value("${influxdb2.bucket}") String bucket) {
+    return new InfluxDb2DeviceStateRepository(influxDBClient, bucket);
   }
 
 }

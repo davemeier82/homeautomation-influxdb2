@@ -18,22 +18,35 @@ package com.github.davemeier82.homeautomation.influxdb2;
 
 import com.github.davemeier82.homeautomation.core.DeviceStateRepository;
 import com.github.davemeier82.homeautomation.core.device.DeviceId;
+import com.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
 import com.influxdb.client.InfluxDBClient;
+import com.influxdb.client.QueryApi;
 import com.influxdb.client.WriteApi;
 import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
+import com.influxdb.query.FluxRecord;
+import com.influxdb.query.FluxTable;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.DisposableBean;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.Optional;
+
+import static java.util.Objects.requireNonNull;
 
 public class InfluxDb2DeviceStateRepository implements DeviceStateRepository, DisposableBean {
 
   private static final String VALUE_FIELD_NAME = "value";
   private final WriteApi writeApi;
+  private final QueryApi queryApi;
+  private final String bucket;
 
-  public InfluxDb2DeviceStateRepository(InfluxDBClient influxDBClient) {
+  public InfluxDb2DeviceStateRepository(InfluxDBClient influxDBClient, String bucket) {
     writeApi = influxDBClient.makeWriteApi();
+    queryApi = influxDBClient.getQueryApi();
+    this.bucket = bucket;
   }
 
   @Override
@@ -55,6 +68,28 @@ public class InfluxDb2DeviceStateRepository implements DeviceStateRepository, Di
     Point point = createPoint(deviceId, category, time);
     point.addField(VALUE_FIELD_NAME, value);
     writeApi.writePoint(point);
+  }
+
+  @Override
+  public <T> Optional<DataWithTimestamp<T>> findLatestValue(DeviceId deviceId, String category) {
+    List<FluxTable> tables = queryApi.query("from(bucket: \"" + bucket + "\")\n" +
+        "  |> range(start:-2d)\n" +
+        "  |> filter(fn: (r) => r.deviceId == \"" + deviceId.getId() + "\")\n" +
+        "  |> filter(fn: (r) => r.deviceType == \"" + deviceId.getType() + "\")\n" +
+        "  |> filter(fn: (r) => r._measurement == \"" + category + "\")\n" +
+        "  |> filter(fn: (r) => r._field == \"value\")\n" +
+        "  |> last()");
+
+    if (tables.isEmpty()) {
+      return Optional.empty();
+    }
+    List<FluxRecord> records = tables.get(0).getRecords();
+    if (records.isEmpty()) {
+      return Optional.empty();
+    }
+    FluxRecord record = records.get(0);
+    //noinspection unchecked
+    return Optional.of(new DataWithTimestamp<>(requireNonNull(record.getTime()).atZone(ZoneId.systemDefault()), (T) record.getValueByKey("_value")));
   }
 
   @NotNull
