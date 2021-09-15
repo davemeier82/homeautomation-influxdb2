@@ -16,6 +16,9 @@
 
 package com.github.davemeier82.homeautomation.influxdb2;
 
+import com.github.davemeier82.homeautomation.core.event.EventFactory;
+import com.github.davemeier82.homeautomation.core.event.EventPublisher;
+import com.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2DeviceFactory;
 import com.github.davemeier82.homeautomation.spring.core.HomeAutomationCoreAutoConfiguration;
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
@@ -39,11 +42,17 @@ public class HomeAutomationInfluxDb2AutoConfiguration {
   ) {
     return InfluxDBClientFactory.create(url, token, organization, bucket);
   }
-
+  
   @Bean
   @ConditionalOnBean(InfluxDBClient.class)
   InfluxDb2DeviceStateRepository influxDb2DeviceStateRepository(InfluxDBClient influxDBClient, @Value("${influxdb2.bucket}") String bucket) {
     return new InfluxDb2DeviceStateRepository(influxDBClient, bucket);
+  }
+
+  @Bean
+  @ConditionalOnBean(InfluxDBClient.class)
+  InfluxDb2DeviceFactory influxDb2DeviceFactory(EventPublisher eventPublisher, EventFactory eventFactory, InfluxDBClient influxDBClient) {
+    return new InfluxDb2DeviceFactory(eventPublisher, eventFactory, influxDBClient.getQueryApi());
   }
 
 }
