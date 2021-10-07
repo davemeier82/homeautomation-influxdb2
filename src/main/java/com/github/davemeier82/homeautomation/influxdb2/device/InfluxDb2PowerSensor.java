@@ -26,6 +26,8 @@ import com.github.davemeier82.homeautomation.core.event.EventPublisher;
 import com.influxdb.client.QueryApi;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.ZoneId;
 import java.util.List;
@@ -34,11 +36,12 @@ import java.util.Map;
 import static java.util.Objects.requireNonNull;
 
 public class InfluxDb2PowerSensor implements Device {
-
+  private static final Logger log = LoggerFactory.getLogger(InfluxDb2PowerSensor.class);
   public static final String TYPE = "influxdb2-power";
   public static final String QUERY_PARAMETER = "query";
   public static final String ON_THRESHOLD_PARAMETER = "onThreshold";
   public static final String OFF_THRESHOLD_PARAMETER = "offThreshold";
+  public static final String UPDATE_CRON_EXPRESSION_PARAMETER = "updateCronExpression";
   public static final String VERSION_PARAMETER = "version";
   public static final String PARAMETER_VERSION = "1.0.0";
   private final String id;
@@ -70,6 +73,7 @@ public class InfluxDb2PowerSensor implements Device {
   }
 
   public void checkState() {
+    log.debug("reading power value of {}", displayName);
     List<FluxTable> tables = queryApi.query(query);
     if (tables.isEmpty()) {
       return;
@@ -89,8 +93,10 @@ public class InfluxDb2PowerSensor implements Device {
       boolean isOn = readOnlyRelay.isOn().get().getValue();
       if (isOn && powerWithTimestamp.getValue() <= offThreshold) {
         readOnlyRelay.setRelayStateTo(false);
+        log.debug("{} state change to on", displayName);
       } else if (!isOn && powerWithTimestamp.getValue() >= onThreshold) {
         readOnlyRelay.setRelayStateTo(true);
+        log.debug("{} state change to off", displayName);
       }
     }
   }

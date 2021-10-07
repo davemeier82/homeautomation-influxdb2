@@ -21,6 +21,8 @@ import com.github.davemeier82.homeautomation.core.device.DeviceFactory;
 import com.github.davemeier82.homeautomation.core.event.EventFactory;
 import com.github.davemeier82.homeautomation.core.event.EventPublisher;
 import com.influxdb.client.QueryApi;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.support.CronTrigger;
 
 import java.util.Map;
 import java.util.Set;
@@ -32,28 +34,34 @@ public class InfluxDb2DeviceFactory implements DeviceFactory {
 
   private final EventPublisher eventPublisher;
   private final EventFactory eventFactory;
+  private final TaskScheduler scheduler;
   private final QueryApi queryApi;
 
-  public InfluxDb2DeviceFactory(EventPublisher eventPublisher, EventFactory eventFactory, QueryApi queryApi) {
+  public InfluxDb2DeviceFactory(EventPublisher eventPublisher,
+                                EventFactory eventFactory,
+                                TaskScheduler scheduler,
+                                QueryApi queryApi
+  ) {
     this.eventPublisher = eventPublisher;
     this.eventFactory = eventFactory;
+    this.scheduler = scheduler;
     this.queryApi = queryApi;
   }
 
   @Override
   public boolean supportsDeviceType(String type) {
-    return InfluxDb2PowerSensor.TYPE.equals(type);
+    return TYPE.equals(type);
   }
 
   @Override
   public Set<String> getSupportedDeviceTypes() {
-    return Set.of(InfluxDb2PowerSensor.TYPE);
+    return Set.of(TYPE);
   }
 
   @Override
   public Device createDevice(String type, String id, String displayName, Map<String, String> parameters) {
     if (supportsDeviceType(type)) {
-      return new InfluxDb2PowerSensor(id,
+      InfluxDb2PowerSensor influxDb2PowerSensor = new InfluxDb2PowerSensor(id,
           displayName,
           eventPublisher,
           eventFactory,
@@ -61,6 +69,10 @@ public class InfluxDb2DeviceFactory implements DeviceFactory {
           parameters.get(QUERY_PARAMETER),
           parseDouble(parameters.get(ON_THRESHOLD_PARAMETER)),
           parseDouble(parameters.get(OFF_THRESHOLD_PARAMETER)));
+
+      scheduler.schedule(influxDb2PowerSensor::checkState, new CronTrigger(parameters.get(UPDATE_CRON_EXPRESSION_PARAMETER)));
+
+      return influxDb2PowerSensor;
     }
     throw new IllegalArgumentException("device type '" + type + "' not supported");
   }
