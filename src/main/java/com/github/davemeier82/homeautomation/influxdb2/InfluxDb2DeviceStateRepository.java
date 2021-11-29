@@ -74,8 +74,8 @@ public class InfluxDb2DeviceStateRepository implements DeviceStateRepository, Di
   public <T> Optional<DataWithTimestamp<T>> findLatestValue(DeviceId deviceId, String category) {
     List<FluxTable> tables = queryApi.query("from(bucket: \"" + bucket + "\")\n" +
         "  |> range(start:-2d)\n" +
-        "  |> filter(fn: (r) => r.deviceId == \"" + deviceId.getId() + "\")\n" +
-        "  |> filter(fn: (r) => r.deviceType == \"" + deviceId.getType() + "\")\n" +
+        "  |> filter(fn: (r) => r.deviceIds == \"" + deviceId.id() + "\")\n" +
+        "  |> filter(fn: (r) => r.deviceType == \"" + deviceId.type() + "\")\n" +
         "  |> filter(fn: (r) => r._measurement == \"" + category + "\")\n" +
         "  |> filter(fn: (r) => r._field == \"value\")\n" +
         "  |> last()");
@@ -95,8 +95,8 @@ public class InfluxDb2DeviceStateRepository implements DeviceStateRepository, Di
   @NotNull
   private Point createPoint(DeviceId deviceId, String category, Instant time) {
     Point point = new Point(category);
-    point.addTag("deviceType", deviceId.getType());
-    point.addTag("deviceId", deviceId.getId());
+    point.addTag("deviceType", deviceId.type());
+    point.addTag("deviceIds", deviceId.id());
     point.time(time.toEpochMilli(), WritePrecision.MS);
     return point;
   }

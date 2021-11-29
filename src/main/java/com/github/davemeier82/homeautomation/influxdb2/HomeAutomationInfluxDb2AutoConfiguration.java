@@ -16,7 +16,7 @@
 
 package com.github.davemeier82.homeautomation.influxdb2;
 
-import com.github.davemeier82.homeautomation.core.event.EventFactory;
+import com.github.davemeier82.homeautomation.core.event.factory.EventFactory;
 import com.github.davemeier82.homeautomation.core.event.EventPublisher;
 import com.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2DeviceFactory;
 import com.github.davemeier82.homeautomation.spring.core.HomeAutomationCoreAutoConfiguration;

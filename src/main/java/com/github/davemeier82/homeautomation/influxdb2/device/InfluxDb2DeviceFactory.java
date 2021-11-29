@@ -18,7 +18,7 @@ package com.github.davemeier82.homeautomation.influxdb2.device;
 
 import com.github.davemeier82.homeautomation.core.device.Device;
 import com.github.davemeier82.homeautomation.core.device.DeviceFactory;
-import com.github.davemeier82.homeautomation.core.event.EventFactory;
+import com.github.davemeier82.homeautomation.core.event.factory.EventFactory;
 import com.github.davemeier82.homeautomation.core.event.EventPublisher;
 import com.influxdb.client.QueryApi;
 import org.springframework.scheduling.TaskScheduler;

@@ -17,12 +17,12 @@
 package com.github.davemeier82.homeautomation.influxdb2.device;
 
 import com.github.davemeier82.homeautomation.core.device.Device;
-import com.github.davemeier82.homeautomation.core.device.property.DefaultPowerSensor;
-import com.github.davemeier82.homeautomation.core.device.property.DefaultReadOnlyRelay;
 import com.github.davemeier82.homeautomation.core.device.property.DeviceProperty;
+import com.github.davemeier82.homeautomation.core.device.property.defaults.DefaultPowerSensor;
+import com.github.davemeier82.homeautomation.core.device.property.defaults.DefaultReadOnlyRelay;
 import com.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
-import com.github.davemeier82.homeautomation.core.event.EventFactory;
 import com.github.davemeier82.homeautomation.core.event.EventPublisher;
+import com.github.davemeier82.homeautomation.core.event.factory.EventFactory;
 import com.influxdb.client.QueryApi;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
