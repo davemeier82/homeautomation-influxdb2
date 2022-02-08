@@ -46,6 +46,7 @@ public class InfluxDb2PowerSensor implements Device {
   public static final String PARAMETER_VERSION = "1.0.0";
   private final String id;
   private String displayName;
+  private Map<String, String> customIdentifiers;
   private final DefaultPowerSensor powerSensor;
   private final DefaultReadOnlyRelay readOnlyRelay;
   private final QueryApi queryApi;
@@ -60,7 +61,8 @@ public class InfluxDb2PowerSensor implements Device {
                               QueryApi queryApi,
                               String query,
                               double onThreshold,
-                              double offThreshold
+                              double offThreshold,
+                              Map<String, String> customIdentifiers
   ) {
     this.id = id;
     this.displayName = displayName;
@@ -70,6 +72,7 @@ public class InfluxDb2PowerSensor implements Device {
     this.offThreshold = offThreshold;
     powerSensor = new DefaultPowerSensor(0, this, eventPublisher, eventFactory);
     readOnlyRelay = new DefaultReadOnlyRelay(1, this, eventPublisher, eventFactory);
+    this.customIdentifiers = customIdentifiers;
   }
 
   public void checkState() {
@@ -133,5 +136,15 @@ public class InfluxDb2PowerSensor implements Device {
         ON_THRESHOLD_PARAMETER, String.valueOf(onThreshold),
         OFF_THRESHOLD_PARAMETER, String.valueOf(offThreshold),
         VERSION_PARAMETER, PARAMETER_VERSION);
+  }
+
+  @Override
+  public Map<String, String> getCustomIdentifiers() {
+    return customIdentifiers;
+  }
+
+  @Override
+  public void setCustomIdentifiers(Map<String, String> customIdentifiers) {
+    this.customIdentifiers = customIdentifiers;
   }
 }

@@ -18,8 +18,8 @@ package com.github.davemeier82.homeautomation.influxdb2.device;
 
 import com.github.davemeier82.homeautomation.core.device.Device;
 import com.github.davemeier82.homeautomation.core.device.DeviceFactory;
-import com.github.davemeier82.homeautomation.core.event.factory.EventFactory;
 import com.github.davemeier82.homeautomation.core.event.EventPublisher;
+import com.github.davemeier82.homeautomation.core.event.factory.EventFactory;
 import com.influxdb.client.QueryApi;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
@@ -59,7 +59,7 @@ public class InfluxDb2DeviceFactory implements DeviceFactory {
   }
 
   @Override
-  public Device createDevice(String type, String id, String displayName, Map<String, String> parameters) {
+  public Device createDevice(String type, String id, String displayName, Map<String, String> parameters, Map<String, String> customIdentifiers) {
     if (supportsDeviceType(type)) {
       InfluxDb2PowerSensor influxDb2PowerSensor = new InfluxDb2PowerSensor(id,
           displayName,
@@ -68,7 +68,8 @@ public class InfluxDb2DeviceFactory implements DeviceFactory {
           queryApi,
           parameters.get(QUERY_PARAMETER),
           parseDouble(parameters.get(ON_THRESHOLD_PARAMETER)),
-          parseDouble(parameters.get(OFF_THRESHOLD_PARAMETER)));
+          parseDouble(parameters.get(OFF_THRESHOLD_PARAMETER)),
+          customIdentifiers);
 
       scheduler.schedule(influxDb2PowerSensor::checkState, new CronTrigger(parameters.get(UPDATE_CRON_EXPRESSION_PARAMETER)));
       eventPublisher.publishEvent(eventFactory.createNewDeviceCreatedEvent(influxDb2PowerSensor));
