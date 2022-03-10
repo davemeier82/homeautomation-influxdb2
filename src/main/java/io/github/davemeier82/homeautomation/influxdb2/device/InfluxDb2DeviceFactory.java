@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package com.github.davemeier82.homeautomation.influxdb2.device;
+package io.github.davemeier82.homeautomation.influxdb2.device;
 
-import com.github.davemeier82.homeautomation.core.device.Device;
-import com.github.davemeier82.homeautomation.core.device.DeviceFactory;
-import com.github.davemeier82.homeautomation.core.event.EventPublisher;
-import com.github.davemeier82.homeautomation.core.event.factory.EventFactory;
+import io.github.davemeier82.homeautomation.core.device.Device;
+import io.github.davemeier82.homeautomation.core.device.DeviceFactory;
+import io.github.davemeier82.homeautomation.core.event.EventPublisher;
+import io.github.davemeier82.homeautomation.core.event.factory.EventFactory;
 import com.influxdb.client.QueryApi;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
@@ -27,7 +27,7 @@ import org.springframework.scheduling.support.CronTrigger;
 import java.util.Map;
 import java.util.Set;
 
-import static com.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2PowerSensor.*;
+import static io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2PowerSensor.*;
 import static java.lang.Double.parseDouble;
 
 public class InfluxDb2DeviceFactory implements DeviceFactory {

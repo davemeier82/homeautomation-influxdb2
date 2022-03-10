@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-package com.github.davemeier82.homeautomation.influxdb2;
+package io.github.davemeier82.homeautomation.influxdb2;
 
-import com.github.davemeier82.homeautomation.core.DeviceStateRepository;
-import com.github.davemeier82.homeautomation.core.device.DeviceId;
-import com.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.QueryApi;
 import com.influxdb.client.WriteApi;
@@ -26,6 +23,9 @@ import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
+import io.github.davemeier82.homeautomation.core.DeviceStateRepository;
+import io.github.davemeier82.homeautomation.core.device.DeviceId;
+import io.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.DisposableBean;
 

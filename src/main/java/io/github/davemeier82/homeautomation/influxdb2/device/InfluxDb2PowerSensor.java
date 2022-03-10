@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package com.github.davemeier82.homeautomation.influxdb2.device;
+package io.github.davemeier82.homeautomation.influxdb2.device;
 
-import com.github.davemeier82.homeautomation.core.device.Device;
-import com.github.davemeier82.homeautomation.core.device.property.DeviceProperty;
-import com.github.davemeier82.homeautomation.core.device.property.defaults.DefaultPowerSensor;
-import com.github.davemeier82.homeautomation.core.device.property.defaults.DefaultReadOnlyRelay;
-import com.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
-import com.github.davemeier82.homeautomation.core.event.EventPublisher;
-import com.github.davemeier82.homeautomation.core.event.factory.EventFactory;
+import io.github.davemeier82.homeautomation.core.device.Device;
+import io.github.davemeier82.homeautomation.core.device.property.DeviceProperty;
+import io.github.davemeier82.homeautomation.core.device.property.defaults.DefaultPowerSensor;
+import io.github.davemeier82.homeautomation.core.device.property.defaults.DefaultReadOnlyRelay;
+import io.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
+import io.github.davemeier82.homeautomation.core.event.EventPublisher;
+import io.github.davemeier82.homeautomation.core.event.factory.EventFactory;
 import com.influxdb.client.QueryApi;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;

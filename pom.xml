@@ -20,7 +20,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.github.davemeier82.homeautomation</groupId>
+        <groupId>io.github.davemeier82.homeautomation</groupId>
         <artifactId>homeautomation-parent</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
@@ -72,7 +72,7 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.github.davemeier82.homeautomation</groupId>
+            <groupId>io.github.davemeier82.homeautomation</groupId>
             <artifactId>homeautomation-spring-core</artifactId>
             <version>${homeautomation-spring-core.version}</version>
         </dependency>
