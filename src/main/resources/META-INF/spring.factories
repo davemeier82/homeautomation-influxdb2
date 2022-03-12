@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-HomeAutomationInfluxDb2AutoConfiguration
+io.github.davemeier82.homeautomation.influxdb2.HomeAutomationInfluxDb2AutoConfiguration
