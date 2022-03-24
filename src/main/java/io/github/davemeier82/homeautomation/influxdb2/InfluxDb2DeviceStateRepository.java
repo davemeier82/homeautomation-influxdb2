@@ -36,6 +36,12 @@ import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Influx 2 database implemantaion of a {@link DeviceStateRepository}.
+ *
+ * @author David Meier
+ * @since 0.1.0
+ */
 public class InfluxDb2DeviceStateRepository implements DeviceStateRepository, DisposableBean {
 
   private static final String VALUE_FIELD_NAME = "value";

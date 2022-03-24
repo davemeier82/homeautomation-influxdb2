@@ -16,12 +16,12 @@
 
 package io.github.davemeier82.homeautomation.influxdb2;
 
-import io.github.davemeier82.homeautomation.core.event.factory.EventFactory;
-import io.github.davemeier82.homeautomation.core.event.EventPublisher;
-import io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2DeviceFactory;
-import io.github.davemeier82.homeautomation.spring.core.HomeAutomationCoreAutoConfiguration;
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
+import io.github.davemeier82.homeautomation.core.event.EventPublisher;
+import io.github.davemeier82.homeautomation.core.event.factory.EventFactory;
+import io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2DeviceFactory;
+import io.github.davemeier82.homeautomation.spring.core.HomeAutomationCoreAutoConfiguration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -31,6 +31,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
+/**
+ * Auto configuration.
+ *
+ * @author David Meier
+ * @since 0.1.0
+ */
 @Configuration
 @AutoConfigureBefore(HomeAutomationCoreAutoConfiguration.class)
 public class HomeAutomationInfluxDb2AutoConfiguration {

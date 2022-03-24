@@ -16,6 +16,9 @@
 
 package io.github.davemeier82.homeautomation.influxdb2.device;
 
+import com.influxdb.client.QueryApi;
+import com.influxdb.query.FluxRecord;
+import com.influxdb.query.FluxTable;
 import io.github.davemeier82.homeautomation.core.device.Device;
 import io.github.davemeier82.homeautomation.core.device.property.DeviceProperty;
 import io.github.davemeier82.homeautomation.core.device.property.defaults.DefaultPowerSensor;
@@ -23,9 +26,6 @@ import io.github.davemeier82.homeautomation.core.device.property.defaults.Defaul
 import io.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
 import io.github.davemeier82.homeautomation.core.event.EventPublisher;
 import io.github.davemeier82.homeautomation.core.event.factory.EventFactory;
-import com.influxdb.client.QueryApi;
-import com.influxdb.query.FluxRecord;
-import com.influxdb.query.FluxTable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +35,12 @@ import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Devices that pulls power values from a influx 2 database (https://www.influxdata.com).
+ *
+ * @author David Meier
+ * @since 0.1.0
+ */
 public class InfluxDb2PowerSensor implements Device {
   private static final Logger log = LoggerFactory.getLogger(InfluxDb2PowerSensor.class);
   public static final String TYPE = "influxdb2-power";
@@ -54,6 +60,19 @@ public class InfluxDb2PowerSensor implements Device {
   private final double onThreshold;
   private final double offThreshold;
 
+  /**
+   * Constructor.
+   *
+   * @param id                the id
+   * @param displayName       the display name
+   * @param eventPublisher    the event publisher
+   * @param eventFactory      the event factory
+   * @param queryApi          the query API
+   * @param query             the query that returns the power value
+   * @param onThreshold       the threshold that triggers a relay on event
+   * @param offThreshold      the threshold that triggers a relay off event
+   * @param customIdentifiers optional custom identifiers
+   */
   public InfluxDb2PowerSensor(String id,
                               String displayName,
                               EventPublisher eventPublisher,
@@ -75,6 +94,9 @@ public class InfluxDb2PowerSensor implements Device {
     this.customIdentifiers = customIdentifiers;
   }
 
+  /**
+   * This method gets called by the scheduler to pull new data form the influx database
+   */
   public void checkState() {
     log.debug("reading power value of {}", displayName);
     List<FluxTable> tables = queryApi.query(query);

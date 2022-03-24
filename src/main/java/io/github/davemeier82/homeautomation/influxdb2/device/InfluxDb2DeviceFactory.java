@@ -16,11 +16,11 @@
 
 package io.github.davemeier82.homeautomation.influxdb2.device;
 
+import com.influxdb.client.QueryApi;
 import io.github.davemeier82.homeautomation.core.device.Device;
 import io.github.davemeier82.homeautomation.core.device.DeviceFactory;
 import io.github.davemeier82.homeautomation.core.event.EventPublisher;
 import io.github.davemeier82.homeautomation.core.event.factory.EventFactory;
-import com.influxdb.client.QueryApi;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 
@@ -30,6 +30,12 @@ import java.util.Set;
 import static io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2PowerSensor.*;
 import static java.lang.Double.parseDouble;
 
+/**
+ * Factory for Influx 2 database devices (https://www.influxdata.com).
+ *
+ * @author David Meier
+ * @since 0.1.0
+ */
 public class InfluxDb2DeviceFactory implements DeviceFactory {
 
   private final EventPublisher eventPublisher;
@@ -37,6 +43,14 @@ public class InfluxDb2DeviceFactory implements DeviceFactory {
   private final TaskScheduler scheduler;
   private final QueryApi queryApi;
 
+  /**
+   * Constructor.
+   *
+   * @param eventPublisher the event publisher
+   * @param eventFactory   the event factory
+   * @param scheduler      scheduler to schedule pulls form the influx database.
+   * @param queryApi       the query api
+   */
   public InfluxDb2DeviceFactory(EventPublisher eventPublisher,
                                 EventFactory eventFactory,
                                 TaskScheduler scheduler,
@@ -72,7 +86,6 @@ public class InfluxDb2DeviceFactory implements DeviceFactory {
           customIdentifiers);
 
       scheduler.schedule(influxDb2PowerSensor::checkState, new CronTrigger(parameters.get(UPDATE_CRON_EXPRESSION_PARAMETER)));
-      eventPublisher.publishEvent(eventFactory.createNewDeviceCreatedEvent(influxDb2PowerSensor));
 
       return influxDb2PowerSensor;
     }
