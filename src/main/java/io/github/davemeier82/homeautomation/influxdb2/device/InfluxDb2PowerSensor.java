@@ -59,6 +59,7 @@ public class InfluxDb2PowerSensor implements Device {
   private final String query;
   private final double onThreshold;
   private final double offThreshold;
+  private final String cronExpression;
 
   /**
    * Constructor.
@@ -81,6 +82,7 @@ public class InfluxDb2PowerSensor implements Device {
                               String query,
                               double onThreshold,
                               double offThreshold,
+                              String cronExpression,
                               Map<String, String> customIdentifiers
   ) {
     this.id = id;
@@ -89,6 +91,7 @@ public class InfluxDb2PowerSensor implements Device {
     this.query = query;
     this.onThreshold = onThreshold;
     this.offThreshold = offThreshold;
+    this.cronExpression = cronExpression;
     powerSensor = new DefaultPowerSensor(0, this, eventPublisher, eventFactory);
     readOnlyRelay = new DefaultReadOnlyRelay(1, this, eventPublisher, eventFactory);
     this.customIdentifiers = customIdentifiers;
@@ -157,6 +160,7 @@ public class InfluxDb2PowerSensor implements Device {
         QUERY_PARAMETER, query,
         ON_THRESHOLD_PARAMETER, String.valueOf(onThreshold),
         OFF_THRESHOLD_PARAMETER, String.valueOf(offThreshold),
+        UPDATE_CRON_EXPRESSION_PARAMETER, cronExpression,
         VERSION_PARAMETER, PARAMETER_VERSION);
   }
 

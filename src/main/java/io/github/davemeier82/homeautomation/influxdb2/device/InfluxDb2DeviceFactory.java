@@ -83,6 +83,7 @@ public class InfluxDb2DeviceFactory implements DeviceFactory {
           parameters.get(QUERY_PARAMETER),
           parseDouble(parameters.get(ON_THRESHOLD_PARAMETER)),
           parseDouble(parameters.get(OFF_THRESHOLD_PARAMETER)),
+          parameters.get(UPDATE_CRON_EXPRESSION_PARAMETER),
           customIdentifiers);
 
       scheduler.schedule(influxDb2PowerSensor::checkState, new CronTrigger(parameters.get(UPDATE_CRON_EXPRESSION_PARAMETER)));
