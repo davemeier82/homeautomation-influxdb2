@@ -36,7 +36,7 @@ import java.util.Map;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Devices that pulls power values from a influx 2 database (https://www.influxdata.com).
+ * Devices that pulls power values from a influx 2 database (<a href="https://www.influxdata.com">www.influxdata.com</a>).
  *
  * @author David Meier
  * @since 0.1.0
@@ -110,19 +110,22 @@ public class InfluxDb2PowerSensor implements Device {
     if (records.isEmpty()) {
       return;
     }
-    FluxRecord record = records.get(0);
-    DataWithTimestamp<Double> powerWithTimestamp = new DataWithTimestamp<>(requireNonNull(record.getTime()).atZone(ZoneId.systemDefault()),
-        (Double) record.getValueByKey("_value"));
+    List<DataWithTimestamp<Double>> values = records.stream()
+        .map(record -> new DataWithTimestamp<>(requireNonNull(record.getTime()).atZone(ZoneId.systemDefault()),
+            (Double) record.getValueByKey("_value")))
+        .toList();
 
-    powerSensor.setWatt(powerWithTimestamp);
+
+    powerSensor.setWatt(values.get(values.size() - 1));
     if (readOnlyRelay.isOn().isEmpty()) {
-      readOnlyRelay.setRelayStateTo(powerWithTimestamp.getValue() >= onThreshold);
+      readOnlyRelay.setRelayStateTo(values.stream().anyMatch(data -> data.getValue() >= onThreshold));
     } else {
-      boolean isOn = readOnlyRelay.isOn().get().getValue();
-      if (isOn && powerWithTimestamp.getValue() <= offThreshold) {
-        readOnlyRelay.setRelayStateTo(false);
-        log.debug("{} state change to on", displayName);
-      } else if (!isOn && powerWithTimestamp.getValue() >= onThreshold) {
+      if (readOnlyRelay.isOn().get().getValue()) {
+        if (values.stream().anyMatch(data -> data.getValue() <= offThreshold)) {
+          readOnlyRelay.setRelayStateTo(false);
+          log.debug("{} state change to on", displayName);
+        }
+      } else if (values.stream().anyMatch(data -> data.getValue() >= onThreshold)) {
         readOnlyRelay.setRelayStateTo(true);
         log.debug("{} state change to off", displayName);
       }
