@@ -36,7 +36,7 @@ jobs:
         gpg-passphrase: MAVEN_GPG_PASSPHRASE # env variable for GPG private key passphrase
 
     - name: Release & Publish to Apache Maven Central
-      run: mvn -U -B -Prelease release:prepare release:perform -DreleaseVersion=${{ github.event.inputs.releaseVersion }} -DdevelopmentVersion=${{ github.event.inputs.developmentVersion }} deploy
+      run: mvn -U -B -Prelease release:prepare release:perform -DreleaseVersion=${{ github.event.inputs.releaseVersion }} -DdevelopmentVersion=${{ github.event.inputs.developmentVersion }}
       env:
         MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
