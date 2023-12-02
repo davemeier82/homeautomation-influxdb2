@@ -45,6 +45,7 @@ import static java.util.Objects.requireNonNull;
 public class InfluxDb2DeviceStateRepository implements DeviceStateRepository, DisposableBean {
 
   private static final String VALUE_FIELD_NAME = "value";
+  private static final String TAG_LABEL = "label";
   private final WriteApi writeApi;
   private final QueryApi queryApi;
   private final String bucket;
@@ -56,23 +57,26 @@ public class InfluxDb2DeviceStateRepository implements DeviceStateRepository, Di
   }
 
   @Override
-  public void insert(DeviceId deviceId, String category, double value, Instant time) {
+  public void insert(DeviceId deviceId, String category, String label, double value, Instant time) {
     Point point = createPoint(deviceId, category, time);
     point.addField(VALUE_FIELD_NAME, value);
+    point.addTag(TAG_LABEL, label);
     writeApi.writePoint(point);
   }
 
   @Override
-  public void insert(DeviceId deviceId, String category, int value, Instant time) {
+  public void insert(DeviceId deviceId, String category, String label, int value, Instant time) {
     Point point = createPoint(deviceId, category, time);
     point.addField(VALUE_FIELD_NAME, value);
+    point.addTag(TAG_LABEL, label);
     writeApi.writePoint(point);
   }
 
   @Override
-  public void insert(DeviceId deviceId, String category, boolean value, Instant time) {
+  public void insert(DeviceId deviceId, String category, String label, boolean value, Instant time) {
     Point point = createPoint(deviceId, category, time);
     point.addField(VALUE_FIELD_NAME, value);
+    point.addTag(TAG_LABEL, label);
     writeApi.writePoint(point);
   }
 
