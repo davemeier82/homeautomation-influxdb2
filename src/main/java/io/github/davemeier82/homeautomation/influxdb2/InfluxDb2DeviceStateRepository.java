@@ -23,9 +23,9 @@ import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
-import io.github.davemeier82.homeautomation.core.DeviceStateRepository;
 import io.github.davemeier82.homeautomation.core.device.DeviceId;
 import io.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
+import io.github.davemeier82.homeautomation.core.repositories.DeviceStateRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.DisposableBean;
 
@@ -93,11 +93,11 @@ public class InfluxDb2DeviceStateRepository implements DeviceStateRepository, Di
     if (tables.isEmpty()) {
       return Optional.empty();
     }
-    List<FluxRecord> records = tables.get(0).getRecords();
+    List<FluxRecord> records = tables.getFirst().getRecords();
     if (records.isEmpty()) {
       return Optional.empty();
     }
-    FluxRecord record = records.get(0);
+    FluxRecord record = records.getFirst();
     //noinspection unchecked
     return Optional.of(new DataWithTimestamp<>(requireNonNull(record.getTime()).atZone(ZoneId.systemDefault()), (T) record.getValueByKey("_value")));
   }
