@@ -20,30 +20,29 @@ import com.influxdb.client.QueryApi;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
 import io.github.davemeier82.homeautomation.core.device.Device;
-import io.github.davemeier82.homeautomation.core.device.property.DeviceProperty;
-import io.github.davemeier82.homeautomation.core.device.property.defaults.DefaultPowerSensor;
-import io.github.davemeier82.homeautomation.core.device.property.defaults.DefaultReadOnlyRelay;
+import io.github.davemeier82.homeautomation.core.device.DeviceId;
+import io.github.davemeier82.homeautomation.core.device.DeviceType;
+import io.github.davemeier82.homeautomation.core.device.property.DefaultDevicePropertyValueType;
+import io.github.davemeier82.homeautomation.core.device.property.DevicePropertyId;
 import io.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
-import io.github.davemeier82.homeautomation.core.event.EventPublisher;
-import io.github.davemeier82.homeautomation.core.event.factory.EventFactory;
+import io.github.davemeier82.homeautomation.core.repositories.DevicePropertyValueRepository;
+import io.github.davemeier82.homeautomation.core.updater.PowerValueUpdateService;
+import io.github.davemeier82.homeautomation.core.updater.RelayStateValueUpdateService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.ZoneId;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
+import static io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2DeviceType.INFLUX_DB2_POWER_SENSOR;
 import static java.util.Objects.requireNonNull;
 
-/**
- * Devices that pulls power values from a influx 2 database (<a href="https://www.influxdata.com">www.influxdata.com</a>).
- *
- * @author David Meier
- * @since 0.1.0
- */
 public class InfluxDb2PowerSensor implements Device {
   private static final Logger log = LoggerFactory.getLogger(InfluxDb2PowerSensor.class);
-  public static final String TYPE = "influxdb2-power";
+
   public static final String QUERY_PARAMETER = "query";
   public static final String ON_THRESHOLD_PARAMETER = "onThreshold";
   public static final String OFF_THRESHOLD_PARAMETER = "offThreshold";
@@ -53,37 +52,29 @@ public class InfluxDb2PowerSensor implements Device {
   private final String id;
   private String displayName;
   private Map<String, String> customIdentifiers;
-  private final DefaultPowerSensor powerSensor;
-  private final DefaultReadOnlyRelay readOnlyRelay;
+  private final PowerValueUpdateService powerValueUpdateService;
+  private final RelayStateValueUpdateService relayStateValueUpdateService;
+  private final DevicePropertyValueRepository devicePropertyValueRepository;
   private final QueryApi queryApi;
   private final String query;
   private final double onThreshold;
   private final double offThreshold;
   private final String cronExpression;
 
-  /**
-   * Constructor.
-   *
-   * @param id                the id
-   * @param displayName       the display name
-   * @param eventPublisher    the event publisher
-   * @param eventFactory      the event factory
-   * @param queryApi          the query API
-   * @param query             the query that returns the power value
-   * @param onThreshold       the threshold that triggers a relay on event
-   * @param offThreshold      the threshold that triggers a relay off event
-   * @param customIdentifiers optional custom identifiers
-   */
+  private final DevicePropertyId relayDevicePropertyId;
+  private final DevicePropertyId powerDevicePropertyId;
+
   public InfluxDb2PowerSensor(String id,
                               String displayName,
-                              EventPublisher eventPublisher,
-                              EventFactory eventFactory,
                               QueryApi queryApi,
                               String query,
                               double onThreshold,
                               double offThreshold,
                               String cronExpression,
-                              Map<String, String> customIdentifiers
+                              Map<String, String> customIdentifiers,
+                              PowerValueUpdateService powerValueUpdateService,
+                              RelayStateValueUpdateService relayStateValueUpdateService,
+                              DevicePropertyValueRepository devicePropertyValueRepository
   ) {
     this.id = id;
     this.displayName = displayName;
@@ -92,9 +83,13 @@ public class InfluxDb2PowerSensor implements Device {
     this.onThreshold = onThreshold;
     this.offThreshold = offThreshold;
     this.cronExpression = cronExpression;
-    powerSensor = new DefaultPowerSensor(0, this, eventPublisher, eventFactory);
-    readOnlyRelay = new DefaultReadOnlyRelay(1, this, eventPublisher, eventFactory);
     this.customIdentifiers = customIdentifiers;
+    this.powerValueUpdateService = powerValueUpdateService;
+    this.relayStateValueUpdateService = relayStateValueUpdateService;
+    this.devicePropertyValueRepository = devicePropertyValueRepository;
+    DeviceId deviceId = new DeviceId(id, INFLUX_DB2_POWER_SENSOR);
+    relayDevicePropertyId = new DevicePropertyId(deviceId, "relay");
+    powerDevicePropertyId = new DevicePropertyId(deviceId, "power");
   }
 
   /**
@@ -106,35 +101,36 @@ public class InfluxDb2PowerSensor implements Device {
     if (tables.isEmpty()) {
       return;
     }
-    List<FluxRecord> records = tables.get(0).getRecords();
+    List<FluxRecord> records = tables.getFirst().getRecords();
     if (records.isEmpty()) {
       return;
     }
     List<DataWithTimestamp<Double>> values = records.stream()
-        .map(record -> new DataWithTimestamp<>(requireNonNull(record.getTime()).atZone(ZoneId.systemDefault()),
-            (Double) record.getValueByKey("_value")))
-        .toList();
+                                                    .map(record -> new DataWithTimestamp<>(requireNonNull(record.getTime()).atOffset(ZoneOffset.UTC), (Double) record.getValueByKey("_value")))
+                                                    .toList();
 
+    powerValueUpdateService.setValue(values.getLast().getValue(), values.getLast().getDateTime(), powerDevicePropertyId, displayName);
 
-    powerSensor.setWatt(values.get(values.size() - 1));
-    if (readOnlyRelay.isOn().isEmpty()) {
-      readOnlyRelay.setRelayStateTo(values.stream().anyMatch(data -> data.getValue() >= onThreshold));
-    } else {
-      if (readOnlyRelay.isOn().get().getValue()) {
+    isOn().ifPresentOrElse(isOn -> {
+      if (isOn) {
         if (values.stream().anyMatch(data -> data.getValue() <= offThreshold)) {
-          readOnlyRelay.setRelayStateTo(false);
+          setRelayState(false);
           log.debug("{} state change to on", displayName);
         }
       } else if (values.stream().anyMatch(data -> data.getValue() >= onThreshold)) {
-        readOnlyRelay.setRelayStateTo(true);
+        setRelayState(true);
         log.debug("{} state change to off", displayName);
       }
-    }
+    }, () -> setRelayState((values.stream().anyMatch(data -> data.getValue() >= onThreshold))));
+  }
+
+  private void setRelayState(boolean isOn) {
+    relayStateValueUpdateService.setValue(isOn, OffsetDateTime.now(), relayDevicePropertyId, displayName);
   }
 
   @Override
-  public String getType() {
-    return TYPE;
+  public DeviceType getType() {
+    return INFLUX_DB2_POWER_SENSOR;
   }
 
   @Override
@@ -153,17 +149,8 @@ public class InfluxDb2PowerSensor implements Device {
   }
 
   @Override
-  public List<? extends DeviceProperty> getDeviceProperties() {
-    return List.of(powerSensor, readOnlyRelay);
-  }
-
-  @Override
   public Map<String, String> getParameters() {
-    return Map.of(
-        QUERY_PARAMETER, query,
-        ON_THRESHOLD_PARAMETER, String.valueOf(onThreshold),
-        OFF_THRESHOLD_PARAMETER, String.valueOf(offThreshold),
-        UPDATE_CRON_EXPRESSION_PARAMETER, cronExpression,
+    return Map.of(QUERY_PARAMETER, query, ON_THRESHOLD_PARAMETER, String.valueOf(onThreshold), OFF_THRESHOLD_PARAMETER, String.valueOf(offThreshold), UPDATE_CRON_EXPRESSION_PARAMETER, cronExpression,
         VERSION_PARAMETER, PARAMETER_VERSION);
   }
 
@@ -175,5 +162,9 @@ public class InfluxDb2PowerSensor implements Device {
   @Override
   public void setCustomIdentifiers(Map<String, String> customIdentifiers) {
     this.customIdentifiers = customIdentifiers;
+  }
+
+  private Optional<Boolean> isOn() {
+    return devicePropertyValueRepository.findLatestValue(relayDevicePropertyId, DefaultDevicePropertyValueType.RELAY_STATE, Boolean.class).map(DataWithTimestamp::getValue);
   }
 }

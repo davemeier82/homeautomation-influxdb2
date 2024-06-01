@@ -23,29 +23,27 @@ import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
-import io.github.davemeier82.homeautomation.core.device.DeviceId;
+import io.github.davemeier82.homeautomation.core.device.property.DevicePropertyId;
+import io.github.davemeier82.homeautomation.core.device.property.DevicePropertyValueType;
 import io.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
-import io.github.davemeier82.homeautomation.core.repositories.DeviceStateRepository;
-import org.jetbrains.annotations.NotNull;
+import io.github.davemeier82.homeautomation.core.repositories.DevicePropertyValueRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 
-import java.time.Instant;
-import java.time.ZoneId;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static java.time.ZoneOffset.UTC;
 import static java.util.Objects.requireNonNull;
 
-/**
- * Influx 2 database implemantaion of a {@link DeviceStateRepository}.
- *
- * @author David Meier
- * @since 0.1.0
- */
-public class InfluxDb2DeviceStateRepository implements DeviceStateRepository, DisposableBean {
+public class InfluxDb2DeviceStateRepository implements DevicePropertyValueRepository, DisposableBean {
 
   private static final String VALUE_FIELD_NAME = "value";
-  private static final String TAG_LABEL = "label";
+  private static final Logger log = LoggerFactory.getLogger(InfluxDb2DeviceStateRepository.class);
   private final WriteApi writeApi;
   private final QueryApi queryApi;
   private final String bucket;
@@ -56,39 +54,82 @@ public class InfluxDb2DeviceStateRepository implements DeviceStateRepository, Di
     this.bucket = bucket;
   }
 
+  static <T> T cast(Object value, Class<T> clazz) {
+
+    if (value == null) {
+      return null;
+    }
+
+    if (value.getClass().equals(clazz)) {
+      return (T) value;
+    }
+
+    if (value instanceof Number number) {
+      if (clazz.equals(Long.class)) {
+        return (T) Long.valueOf(number.longValue());
+      } else if (clazz.equals(Integer.class)) {
+        return (T) Integer.valueOf(number.intValue());
+      } else if (clazz.equals(Float.class)) {
+        return (T) Float.valueOf(number.floatValue());
+      } else if (clazz.equals(Double.class)) {
+        return (T) Double.valueOf(number.doubleValue());
+      } else if (clazz.equals(Short.class)) {
+        return (T) Short.valueOf(number.shortValue());
+      } else if (clazz.equals(Byte.class)) {
+        return (T) Byte.valueOf(number.byteValue());
+      } else if (clazz.equals(String.class)) {
+        return (T) String.valueOf(number);
+      } else if (clazz.equals(Boolean.class)) {
+        return (T) Boolean.valueOf(number.doubleValue() > 0);
+      }
+    } else if (clazz.equals(Boolean.class) && value instanceof String s) {
+      return (T) Boolean.valueOf(s);
+    } else if (clazz.isEnum() && value instanceof String s) {
+      try {
+        Method valueOf = clazz.getMethod("valueOf", String.class);
+        Object e = valueOf.invoke(null, s);
+        return (T) e;
+      } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+        log.error("cast from {} to {} is not supported", value.getClass(), clazz);
+      }
+    }
+
+    log.error("cast from {} to {} is not supported", value.getClass(), clazz);
+    return null;
+  }
+
   @Override
-  public void insert(DeviceId deviceId, String category, String label, double value, Instant time) {
-    Point point = createPoint(deviceId, category, time);
-    point.addField(VALUE_FIELD_NAME, value);
-    point.addTag(TAG_LABEL, label);
+  public void insert(DevicePropertyId devicePropertyId, DevicePropertyValueType devicePropertyValueType, String displayName, Object value, OffsetDateTime time) {
+    Point point = new Point(devicePropertyValueType.getTypeName());
+    point.addTag("devicePropertyId", devicePropertyId.id());
+    point.addTag("deviceId", devicePropertyId.deviceId().id());
+    point.addTag("deviceType", devicePropertyId.deviceId().type().getTypeName());
+    point.addTag("unit", devicePropertyValueType.getUnit());
+    point.addTag("displayName", displayName);
+    point.time(time.toInstant().toEpochMilli(), WritePrecision.MS);
+    switch (value) {
+      case Integer i -> point.addField(VALUE_FIELD_NAME, i);
+      case Float f -> point.addField(VALUE_FIELD_NAME, f);
+      case Double d -> point.addField(VALUE_FIELD_NAME, d);
+      case Long l -> point.addField(VALUE_FIELD_NAME, l);
+      case Number n -> point.addField(VALUE_FIELD_NAME, n);
+      case String s -> point.addField(VALUE_FIELD_NAME, s);
+      case Enum<?> e -> point.addField(VALUE_FIELD_NAME, e.name());
+      default -> point.addField(VALUE_FIELD_NAME, value.toString());
+    }
     writeApi.writePoint(point);
   }
 
   @Override
-  public void insert(DeviceId deviceId, String category, String label, int value, Instant time) {
-    Point point = createPoint(deviceId, category, time);
-    point.addField(VALUE_FIELD_NAME, value);
-    point.addTag(TAG_LABEL, label);
-    writeApi.writePoint(point);
-  }
-
-  @Override
-  public void insert(DeviceId deviceId, String category, String label, boolean value, Instant time) {
-    Point point = createPoint(deviceId, category, time);
-    point.addField(VALUE_FIELD_NAME, value);
-    point.addTag(TAG_LABEL, label);
-    writeApi.writePoint(point);
-  }
-
-  @Override
-  public <T> Optional<DataWithTimestamp<T>> findLatestValue(DeviceId deviceId, String category) {
-    List<FluxTable> tables = queryApi.query("from(bucket: \"" + bucket + "\")\n" +
-        "  |> range(start:-2d)\n" +
-        "  |> filter(fn: (r) => r.deviceIds == \"" + deviceId.id() + "\")\n" +
-        "  |> filter(fn: (r) => r.deviceType == \"" + deviceId.type() + "\")\n" +
-        "  |> filter(fn: (r) => r._measurement == \"" + category + "\")\n" +
-        "  |> filter(fn: (r) => r._field == \"value\")\n" +
-        "  |> last()");
+  public <T> Optional<DataWithTimestamp<T>> findLatestValue(DevicePropertyId devicePropertyId, DevicePropertyValueType devicePropertyValueType, Class<T> clazz) {
+    List<FluxTable> tables = queryApi.query(
+        "from(bucket: \"" + bucket + "\")\n" +
+            "  |> range(start: 0)\n" +
+            "  |> filter(fn: (r) => r.devicePropertyId == \"" + devicePropertyId.id() + "\")\n" +
+            "  |> filter(fn: (r) => r.deviceId == \"" + devicePropertyId.deviceId().id() + "\")\n" +
+            "  |> filter(fn: (r) => r.deviceType == \"" + devicePropertyId.deviceId().type().getTypeName() + "\")\n" +
+            "  |> filter(fn: (r) => r._measurement == \"" + devicePropertyValueType.getTypeName() + "\")\n" +
+            "  |> filter(fn: (r) => r._field == \"" + VALUE_FIELD_NAME + "\")\n" + "  |> last()");
 
     if (tables.isEmpty()) {
       return Optional.empty();
@@ -98,17 +139,36 @@ public class InfluxDb2DeviceStateRepository implements DeviceStateRepository, Di
       return Optional.empty();
     }
     FluxRecord record = records.getFirst();
-    //noinspection unchecked
-    return Optional.of(new DataWithTimestamp<>(requireNonNull(record.getTime()).atZone(ZoneId.systemDefault()), (T) record.getValueByKey("_value")));
+
+    Object value = record.getValueByKey("_value");
+    T mapped = cast(value, clazz);
+
+    return Optional.of(new DataWithTimestamp<>(requireNonNull(record.getTime()).atOffset(UTC), mapped));
   }
 
-  @NotNull
-  private Point createPoint(DeviceId deviceId, String category, Instant time) {
-    Point point = new Point(category);
-    point.addTag("deviceType", deviceId.type());
-    point.addTag("deviceIds", deviceId.id());
-    point.time(time.toEpochMilli(), WritePrecision.MS);
-    return point;
+  @Override
+  public Optional<OffsetDateTime> lastTimeValueMatched(DevicePropertyId devicePropertyId, DevicePropertyValueType devicePropertyValueType, Object value) {
+    List<FluxTable> tables = queryApi.query(
+        "from(bucket: \"" + bucket + "\")\n" +
+            "  |> range(start: 0)\n" +
+            "  |> filter(fn: (r) => r.devicePropertyId == \"" + devicePropertyId.id() + "\")\n" +
+            "  |> filter(fn: (r) => r.deviceId == \"" + devicePropertyId.deviceId().id() + "\")\n" +
+            "  |> filter(fn: (r) => r.deviceType == \"" + devicePropertyId.deviceId().type().getTypeName() + "\")\n" +
+            "  |> filter(fn: (r) => r._measurement == \"" + devicePropertyValueType.getTypeName() + "\")\n" +
+            "  |> filter(fn: (r) => r._field == \"" + VALUE_FIELD_NAME + "\")\n" +
+            "  |> filter(fn: (r) => r._value == \"" + value + "\")\n" +
+            "  |> last()");
+
+    if (tables.isEmpty()) {
+      return Optional.empty();
+    }
+
+    List<FluxRecord> records = tables.getFirst().getRecords();
+    if (records.isEmpty()) {
+      return Optional.empty();
+    }
+    FluxRecord record = records.getFirst();
+    return Optional.of(requireNonNull(record.getTime()).atOffset(UTC));
   }
 
   @Override

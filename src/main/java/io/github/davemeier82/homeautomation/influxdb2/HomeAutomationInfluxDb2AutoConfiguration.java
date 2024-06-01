@@ -18,9 +18,6 @@ package io.github.davemeier82.homeautomation.influxdb2;
 
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
-import io.github.davemeier82.homeautomation.core.event.EventPublisher;
-import io.github.davemeier82.homeautomation.core.event.factory.EventFactory;
-import io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2DeviceFactory;
 import io.github.davemeier82.homeautomation.spring.core.HomeAutomationCoreAutoConfiguration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
@@ -28,15 +25,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
-/**
- * Auto configuration.
- *
- * @author David Meier
- * @since 0.1.0
- */
+
 @Configuration
 @AutoConfigureBefore(HomeAutomationCoreAutoConfiguration.class)
 public class HomeAutomationInfluxDb2AutoConfiguration {
@@ -53,6 +46,7 @@ public class HomeAutomationInfluxDb2AutoConfiguration {
 
   @Bean
   @ConditionalOnBean(InfluxDBClient.class)
+  @Primary
   InfluxDb2DeviceStateRepository influxDb2DeviceStateRepository(InfluxDBClient influxDBClient, @Value("${influxdb2.bucket}") String bucket) {
     return new InfluxDb2DeviceStateRepository(influxDBClient, bucket);
   }
@@ -64,16 +58,6 @@ public class HomeAutomationInfluxDb2AutoConfiguration {
     threadPoolTaskScheduler.setPoolSize(poolSize);
     threadPoolTaskScheduler.setThreadNamePrefix("influxDb2TaskScheduler");
     return threadPoolTaskScheduler;
-  }
-
-  @Bean
-  @ConditionalOnBean(InfluxDBClient.class)
-  InfluxDb2DeviceFactory influxDb2DeviceFactory(EventPublisher eventPublisher,
-                                                EventFactory eventFactory,
-                                                InfluxDBClient influxDBClient,
-                                                TaskScheduler influxDb2TaskScheduler
-  ) {
-    return new InfluxDb2DeviceFactory(eventPublisher, eventFactory, influxDb2TaskScheduler, influxDBClient.getQueryApi());
   }
 
 }
