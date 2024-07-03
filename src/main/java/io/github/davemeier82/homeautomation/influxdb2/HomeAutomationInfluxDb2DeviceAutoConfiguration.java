@@ -18,6 +18,7 @@ package io.github.davemeier82.homeautomation.influxdb2;
 
 import com.influxdb.client.InfluxDBClient;
 import io.github.davemeier82.homeautomation.core.repositories.DevicePropertyValueRepository;
+import io.github.davemeier82.homeautomation.core.repositories.DeviceRepository;
 import io.github.davemeier82.homeautomation.core.updater.PowerValueUpdateService;
 import io.github.davemeier82.homeautomation.core.updater.RelayStateValueUpdateService;
 import io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2DeviceFactory;
@@ -26,6 +27,7 @@ import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.TaskScheduler;
 
 
@@ -34,14 +36,15 @@ import org.springframework.scheduling.TaskScheduler;
 public class HomeAutomationInfluxDb2DeviceAutoConfiguration {
 
   @Bean
-  @ConditionalOnBean({InfluxDBClient.class, PowerValueUpdateService.class, PowerValueUpdateService.class, RelayStateValueUpdateService.class, DevicePropertyValueRepository.class})
+  @ConditionalOnBean({InfluxDBClient.class, PowerValueUpdateService.class, PowerValueUpdateService.class, RelayStateValueUpdateService.class, DevicePropertyValueRepository.class, DeviceRepository.class})
   InfluxDb2DeviceFactory influxDb2DeviceFactory(InfluxDBClient influxDBClient,
                                                 TaskScheduler influxDb2TaskScheduler,
                                                 PowerValueUpdateService powerValueUpdateService,
                                                 RelayStateValueUpdateService relayStateValueUpdateService,
-                                                DevicePropertyValueRepository devicePropertyValueRepository
+                                                DevicePropertyValueRepository devicePropertyValueRepository,
+                                                @Lazy DeviceRepository deviceRepository
   ) {
-    return new InfluxDb2DeviceFactory(influxDb2TaskScheduler, influxDBClient.getQueryApi(), powerValueUpdateService, relayStateValueUpdateService, devicePropertyValueRepository);
+    return new InfluxDb2DeviceFactory(influxDb2TaskScheduler, influxDBClient.getQueryApi(), powerValueUpdateService, relayStateValueUpdateService, devicePropertyValueRepository, deviceRepository);
   }
 
 }

@@ -21,11 +21,15 @@ import io.github.davemeier82.homeautomation.core.device.Device;
 import io.github.davemeier82.homeautomation.core.device.DeviceFactory;
 import io.github.davemeier82.homeautomation.core.device.DeviceType;
 import io.github.davemeier82.homeautomation.core.repositories.DevicePropertyValueRepository;
+import io.github.davemeier82.homeautomation.core.repositories.DeviceRepository;
 import io.github.davemeier82.homeautomation.core.updater.PowerValueUpdateService;
 import io.github.davemeier82.homeautomation.core.updater.RelayStateValueUpdateService;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -45,18 +49,22 @@ public class InfluxDb2DeviceFactory implements DeviceFactory {
   private final PowerValueUpdateService powerValueUpdateService;
   private final RelayStateValueUpdateService relayStateValueUpdateService;
   private final DevicePropertyValueRepository devicePropertyValueRepository;
+  private final DeviceRepository deviceRepository;
+  private final Set<String> scheduledIds = new HashSet<>();
 
   public InfluxDb2DeviceFactory(TaskScheduler scheduler,
                                 QueryApi queryApi,
                                 PowerValueUpdateService powerValueUpdateService,
                                 RelayStateValueUpdateService relayStateValueUpdateService,
-                                DevicePropertyValueRepository devicePropertyValueRepository
+                                DevicePropertyValueRepository devicePropertyValueRepository,
+                                DeviceRepository deviceRepository
   ) {
     this.scheduler = scheduler;
     this.queryApi = queryApi;
     this.powerValueUpdateService = powerValueUpdateService;
     this.relayStateValueUpdateService = relayStateValueUpdateService;
     this.devicePropertyValueRepository = devicePropertyValueRepository;
+    this.deviceRepository = deviceRepository;
   }
 
   @Override
@@ -85,11 +93,23 @@ public class InfluxDb2DeviceFactory implements DeviceFactory {
           devicePropertyValueRepository
       );
 
-      scheduler.schedule(influxDb2PowerSensor::checkState, new CronTrigger(parameters.get(UPDATE_CRON_EXPRESSION_PARAMETER)));
+      scheduleDevice(influxDb2PowerSensor);
 
       return Optional.of(influxDb2PowerSensor);
     }
     return Optional.empty();
+  }
+
+  @EventListener(ApplicationReadyEvent.class)
+  public void createDevices() {
+    deviceRepository.getDeviceByType(INFLUX_DB2_POWER_SENSOR, InfluxDb2PowerSensor.class).forEach(this::scheduleDevice);
+  }
+
+  private synchronized void scheduleDevice(InfluxDb2PowerSensor sensor) {
+    if (!scheduledIds.contains(sensor.getId())) {
+      scheduledIds.add(sensor.getId());
+      scheduler.schedule(sensor::checkState, new CronTrigger(sensor.getParameters().get(UPDATE_CRON_EXPRESSION_PARAMETER)));
+    }
   }
 
 }

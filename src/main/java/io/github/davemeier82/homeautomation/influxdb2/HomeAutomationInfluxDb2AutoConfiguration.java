@@ -18,10 +18,12 @@ package io.github.davemeier82.homeautomation.influxdb2;
 
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
+import io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2DeviceTypeFactory;
 import io.github.davemeier82.homeautomation.spring.core.HomeAutomationCoreAutoConfiguration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -58,6 +60,12 @@ public class HomeAutomationInfluxDb2AutoConfiguration {
     threadPoolTaskScheduler.setPoolSize(poolSize);
     threadPoolTaskScheduler.setThreadNamePrefix("influxDb2TaskScheduler");
     return threadPoolTaskScheduler;
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  InfluxDb2DeviceTypeFactory influxDb2DeviceTypeFactory() {
+    return new InfluxDb2DeviceTypeFactory();
   }
 
 }

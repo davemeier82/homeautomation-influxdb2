@@ -28,6 +28,7 @@ import io.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
 import io.github.davemeier82.homeautomation.core.repositories.DevicePropertyValueRepository;
 import io.github.davemeier82.homeautomation.core.updater.PowerValueUpdateService;
 import io.github.davemeier82.homeautomation.core.updater.RelayStateValueUpdateService;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,6 +96,8 @@ public class InfluxDb2PowerSensor implements Device {
   /**
    * This method gets called by the scheduler to pull new data form the influx database
    */
+  @SchedulerLock(name = "InfluxDb2PowerSensor",
+      lockAtLeastFor = "PT5S", lockAtMostFor = "PT1M")
   public void checkState() {
     log.debug("reading power value of {}", displayName);
     List<FluxTable> tables = queryApi.query(query);
@@ -108,24 +111,36 @@ public class InfluxDb2PowerSensor implements Device {
     List<DataWithTimestamp<Double>> values = records.stream()
                                                     .map(record -> new DataWithTimestamp<>(requireNonNull(record.getTime()).atOffset(ZoneOffset.UTC), (Double) record.getValueByKey("_value")))
                                                     .toList();
+    if (values.isEmpty()) {
+      log.info("no new values");
+      return;
+    }
 
     powerValueUpdateService.setValue(values.getLast().getValue(), values.getLast().getDateTime(), powerDevicePropertyId, displayName);
 
     isOn().ifPresentOrElse(isOn -> {
       if (isOn) {
-        if (values.stream().anyMatch(data -> data.getValue() <= offThreshold)) {
-          setRelayState(false);
-          log.debug("{} state change to on", displayName);
+        Optional<DataWithTimestamp<Double>> firstOff = values.stream().filter(data -> data.getValue() <= offThreshold).findFirst();
+        if (firstOff.isPresent()) {
+          setRelayState(false, firstOff.get().getDateTime());
+          log.debug("{} state change to off", displayName);
+        } else {
+          setRelayState(true, values.getLast().getDateTime());
         }
-      } else if (values.stream().anyMatch(data -> data.getValue() >= onThreshold)) {
-        setRelayState(true);
-        log.debug("{} state change to off", displayName);
+      } else {
+        Optional<DataWithTimestamp<Double>> firstOn = values.stream().filter(data -> data.getValue() >= onThreshold).findFirst();
+        if (firstOn.isPresent()) {
+          setRelayState(true, firstOn.get().getDateTime());
+          log.debug("{} state change to on", displayName);
+        } else {
+          setRelayState(false, values.getLast().getDateTime());
+        }
       }
-    }, () -> setRelayState((values.stream().anyMatch(data -> data.getValue() >= onThreshold))));
+    }, () -> setRelayState((values.stream().anyMatch(data -> data.getValue() >= onThreshold)), values.getLast().getDateTime()));
   }
 
-  private void setRelayState(boolean isOn) {
-    relayStateValueUpdateService.setValue(isOn, OffsetDateTime.now(), relayDevicePropertyId, displayName);
+  private void setRelayState(boolean isOn, OffsetDateTime dateTime) {
+    relayStateValueUpdateService.setValue(isOn, dateTime, relayDevicePropertyId, displayName);
   }
 
   @Override
