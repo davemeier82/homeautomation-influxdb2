@@ -108,6 +108,7 @@ public class InfluxDb2DeviceStateRepository implements DevicePropertyValueReposi
     point.addTag("displayName", displayName);
     point.time(time.toInstant().toEpochMilli(), WritePrecision.MS);
     switch (value) {
+      case Boolean b -> point.addField(VALUE_FIELD_NAME, b);
       case Integer i -> point.addField(VALUE_FIELD_NAME, i);
       case Float f -> point.addField(VALUE_FIELD_NAME, f);
       case Double d -> point.addField(VALUE_FIELD_NAME, d);
