@@ -24,11 +24,17 @@ import io.github.davemeier82.homeautomation.core.repositories.DevicePropertyValu
 import io.github.davemeier82.homeautomation.core.repositories.DeviceRepository;
 import io.github.davemeier82.homeautomation.core.updater.PowerValueUpdateService;
 import io.github.davemeier82.homeautomation.core.updater.RelayStateValueUpdateService;
+import net.javacrumbs.shedlock.core.DefaultLockingTaskExecutor;
+import net.javacrumbs.shedlock.core.LockConfiguration;
+import net.javacrumbs.shedlock.core.LockProvider;
+import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -51,13 +57,15 @@ public class InfluxDb2DeviceFactory implements DeviceFactory {
   private final DevicePropertyValueRepository devicePropertyValueRepository;
   private final DeviceRepository deviceRepository;
   private final Set<String> scheduledIds = new HashSet<>();
+  private final LockingTaskExecutor executor;
 
   public InfluxDb2DeviceFactory(TaskScheduler scheduler,
                                 QueryApi queryApi,
                                 PowerValueUpdateService powerValueUpdateService,
                                 RelayStateValueUpdateService relayStateValueUpdateService,
                                 DevicePropertyValueRepository devicePropertyValueRepository,
-                                DeviceRepository deviceRepository
+                                DeviceRepository deviceRepository,
+                                LockProvider lockProvider
   ) {
     this.scheduler = scheduler;
     this.queryApi = queryApi;
@@ -65,6 +73,7 @@ public class InfluxDb2DeviceFactory implements DeviceFactory {
     this.relayStateValueUpdateService = relayStateValueUpdateService;
     this.devicePropertyValueRepository = devicePropertyValueRepository;
     this.deviceRepository = deviceRepository;
+    executor = new DefaultLockingTaskExecutor(lockProvider);
   }
 
   @Override
@@ -108,7 +117,9 @@ public class InfluxDb2DeviceFactory implements DeviceFactory {
   private synchronized void scheduleDevice(InfluxDb2PowerSensor sensor) {
     if (!scheduledIds.contains(sensor.getId())) {
       scheduledIds.add(sensor.getId());
-      scheduler.schedule(sensor::checkState, new CronTrigger(sensor.getParameters().get(UPDATE_CRON_EXPRESSION_PARAMETER)));
+      scheduler.schedule(() -> executor.executeWithLock((Runnable) sensor::checkState,
+              new LockConfiguration(Instant.now(), sensor.getType().getTypeName() + "-" + sensor.getId(), Duration.ofSeconds(60), Duration.ofSeconds(5))),
+          new CronTrigger(sensor.getParameters().get(UPDATE_CRON_EXPRESSION_PARAMETER)));
     }
   }
 

@@ -23,6 +23,7 @@ import io.github.davemeier82.homeautomation.core.updater.PowerValueUpdateService
 import io.github.davemeier82.homeautomation.core.updater.RelayStateValueUpdateService;
 import io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2DeviceFactory;
 import io.github.davemeier82.homeautomation.spring.core.HomeAutomationCoreValueUpdateServiceAutoConfiguration;
+import net.javacrumbs.shedlock.core.LockProvider;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
@@ -42,9 +43,11 @@ public class HomeAutomationInfluxDb2DeviceAutoConfiguration {
                                                 PowerValueUpdateService powerValueUpdateService,
                                                 RelayStateValueUpdateService relayStateValueUpdateService,
                                                 DevicePropertyValueRepository devicePropertyValueRepository,
+                                                LockProvider lockProvider,
                                                 @Lazy DeviceRepository deviceRepository
   ) {
-    return new InfluxDb2DeviceFactory(influxDb2TaskScheduler, influxDBClient.getQueryApi(), powerValueUpdateService, relayStateValueUpdateService, devicePropertyValueRepository, deviceRepository);
+    return new InfluxDb2DeviceFactory(influxDb2TaskScheduler, influxDBClient.getQueryApi(), powerValueUpdateService, relayStateValueUpdateService, devicePropertyValueRepository, deviceRepository,
+        lockProvider);
   }
 
 }
