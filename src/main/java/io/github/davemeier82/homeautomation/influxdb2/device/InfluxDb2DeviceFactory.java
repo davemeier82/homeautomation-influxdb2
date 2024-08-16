@@ -44,9 +44,6 @@ import static io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2Dev
 import static io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2PowerSensor.*;
 import static java.lang.Double.parseDouble;
 
-/**
- * Factory for Influx 2 database devices (<a href="https://www.influxdata.com">https://www.influxdata.com</a>).
- */
 public class InfluxDb2DeviceFactory implements DeviceFactory {
 
   public static final Set<DeviceType> SUPPORTED_DEVICE_TYPES = Set.of(INFLUX_DB2_POWER_SENSOR);

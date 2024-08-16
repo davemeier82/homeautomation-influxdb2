@@ -37,11 +37,11 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 public class HomeAutomationInfluxDb2AutoConfiguration {
 
   @Bean
-  @ConditionalOnProperty(prefix = "influxdb2", name = "url")
-  InfluxDBClient influxDBClient(@Value("${influxdb2.url}") String url,
-                                @Value("${influxdb2.token}") char[] token,
-                                @Value("${influxdb2.organization}") String organization,
-                                @Value("${influxdb2.bucket}") String bucket
+  @ConditionalOnProperty(prefix = "homeautomation.influxdb2", name = "url")
+  InfluxDBClient influxDBClient(@Value("${homeautomation.influxdb2.url}") String url,
+                                @Value("${homeautomation.influxdb2.token}") char[] token,
+                                @Value("${homeautomation.influxdb2.organization}") String organization,
+                                @Value("${homeautomation.influxdb2.bucket}") String bucket
   ) {
     return InfluxDBClientFactory.create(url, token, organization, bucket);
   }
@@ -49,13 +49,13 @@ public class HomeAutomationInfluxDb2AutoConfiguration {
   @Bean
   @ConditionalOnBean(InfluxDBClient.class)
   @Primary
-  InfluxDb2DeviceStateRepository influxDb2DeviceStateRepository(InfluxDBClient influxDBClient, @Value("${influxdb2.bucket}") String bucket) {
+  InfluxDb2DeviceStateRepository influxDb2DeviceStateRepository(InfluxDBClient influxDBClient, @Value("${homeautomation.influxdb2.bucket}") String bucket) {
     return new InfluxDb2DeviceStateRepository(influxDBClient, bucket);
   }
 
   @Bean
   @ConditionalOnBean(InfluxDBClient.class)
-  TaskScheduler influxDb2TaskScheduler(@Value("${influxdb2.task-scheduler.pool-size:3}") int poolSize) {
+  TaskScheduler influxDb2TaskScheduler(@Value("${homeautomation.influxdb2.task-scheduler.pool-size:3}") int poolSize) {
     ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
     threadPoolTaskScheduler.setPoolSize(poolSize);
     threadPoolTaskScheduler.setThreadNamePrefix("influxDb2TaskScheduler");
