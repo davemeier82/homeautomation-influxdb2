@@ -24,7 +24,7 @@
     </parent>
 
     <artifactId>homeautomation-influxdb2</artifactId>
-    <version>0.6.1-SNAPSHOT</version>
+    <version>0.6.2</version>
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>HomeAutomation InfluxDB 2.0 integration</description>
@@ -47,7 +47,7 @@
         <connection>scm:git:git://github.com/davemeier82/homeautomation-influxdb2.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/davemeier82/homeautomation-influxdb2.git</developerConnection>
         <url>https://github.com/davemeier82/homeautomation-influxdb2</url>
-        <tag>HEAD</tag>
+        <tag>homeautomation-influxdb2-0.6.2</tag>
     </scm>
     <issueManagement>
         <system>GitHub</system>
