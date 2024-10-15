@@ -18,15 +18,19 @@ package io.github.davemeier82.homeautomation.influxdb2;
 
 import com.influxdb.client.InfluxDBClient;
 import com.influxdb.client.InfluxDBClientFactory;
+import io.github.davemeier82.homeautomation.core.repositories.DeviceRepository;
 import io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2DeviceTypeFactory;
 import io.github.davemeier82.homeautomation.spring.core.HomeAutomationCoreAutoConfiguration;
+import io.github.davemeier82.homeautomation.spring.core.HomeAutomationCorePersistenceAutoConfiguration;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -34,6 +38,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 @Configuration
 @AutoConfigureBefore(HomeAutomationCoreAutoConfiguration.class)
+@AutoConfigureAfter(HomeAutomationCorePersistenceAutoConfiguration.class)
 public class HomeAutomationInfluxDb2AutoConfiguration {
 
   @Bean
@@ -45,12 +50,12 @@ public class HomeAutomationInfluxDb2AutoConfiguration {
   ) {
     return InfluxDBClientFactory.create(url, token, organization, bucket);
   }
-
+  
   @Bean
-  @ConditionalOnBean(InfluxDBClient.class)
+  @ConditionalOnBean({InfluxDBClient.class, DeviceRepository.class})
   @Primary
-  InfluxDb2DeviceStateRepository influxDb2DeviceStateRepository(InfluxDBClient influxDBClient, @Value("${homeautomation.influxdb2.bucket}") String bucket) {
-    return new InfluxDb2DeviceStateRepository(influxDBClient, bucket);
+  InfluxDb2DeviceStateRepository influxDb2DeviceStateRepository(InfluxDBClient influxDBClient, @Value("${homeautomation.influxdb2.bucket}") String bucket, @Lazy DeviceRepository deviceRepository) {
+    return new InfluxDb2DeviceStateRepository(influxDBClient, bucket, deviceRepository);
   }
 
   @Bean

@@ -28,7 +28,6 @@ import io.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
 import io.github.davemeier82.homeautomation.core.repositories.DevicePropertyValueRepository;
 import io.github.davemeier82.homeautomation.core.updater.PowerValueUpdateService;
 import io.github.davemeier82.homeautomation.core.updater.RelayStateValueUpdateService;
-import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,7 +95,6 @@ public class InfluxDb2PowerSensor implements Device {
   /**
    * This method gets called by the scheduler to pull new data form the influx database
    */
-  @Transactional
   public void checkState() {
     log.debug("reading power value of {}", displayName);
     List<FluxTable> tables = queryApi.query(query);

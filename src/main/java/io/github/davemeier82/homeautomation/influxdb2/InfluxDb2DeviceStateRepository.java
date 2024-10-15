@@ -21,12 +21,14 @@ import com.influxdb.client.QueryApi;
 import com.influxdb.client.WriteApi;
 import com.influxdb.client.domain.WritePrecision;
 import com.influxdb.client.write.Point;
+import com.influxdb.exceptions.InfluxException;
 import com.influxdb.query.FluxRecord;
 import com.influxdb.query.FluxTable;
 import io.github.davemeier82.homeautomation.core.device.property.DevicePropertyId;
 import io.github.davemeier82.homeautomation.core.device.property.DevicePropertyValueType;
 import io.github.davemeier82.homeautomation.core.event.DataWithTimestamp;
 import io.github.davemeier82.homeautomation.core.repositories.DevicePropertyValueRepository;
+import io.github.davemeier82.homeautomation.core.repositories.DeviceRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -47,11 +49,13 @@ public class InfluxDb2DeviceStateRepository implements DevicePropertyValueReposi
   private final WriteApi writeApi;
   private final QueryApi queryApi;
   private final String bucket;
+  private final DeviceRepository deviceRepository;
 
-  public InfluxDb2DeviceStateRepository(InfluxDBClient influxDBClient, String bucket) {
+  public InfluxDb2DeviceStateRepository(InfluxDBClient influxDBClient, String bucket, DeviceRepository deviceRepository) {
     writeApi = influxDBClient.makeWriteApi();
     queryApi = influxDBClient.getQueryApi();
     this.bucket = bucket;
+    this.deviceRepository = deviceRepository;
   }
 
   static <T> T cast(Object value, Class<T> clazz) {
@@ -101,6 +105,10 @@ public class InfluxDb2DeviceStateRepository implements DevicePropertyValueReposi
   @Override
   public void insert(DevicePropertyId devicePropertyId, DevicePropertyValueType devicePropertyValueType, String displayName, Object value, OffsetDateTime time) {
     Point point = new Point(devicePropertyValueType.getTypeName());
+    deviceRepository.getByDeviceId(devicePropertyId.deviceId()).ifPresent(device -> {
+      point.addTag("deviceDisplayName", device.getDisplayName());
+      device.getCustomIdentifiers().forEach((key, val) -> point.addTag("ci-" + key, val));
+    });
     point.addTag("devicePropertyId", devicePropertyId.id());
     point.addTag("deviceId", devicePropertyId.deviceId().id());
     point.addTag("deviceType", devicePropertyId.deviceId().type().getTypeName());
@@ -123,14 +131,22 @@ public class InfluxDb2DeviceStateRepository implements DevicePropertyValueReposi
 
   @Override
   public <T> Optional<DataWithTimestamp<T>> findLatestValue(DevicePropertyId devicePropertyId, DevicePropertyValueType devicePropertyValueType, Class<T> clazz) {
-    List<FluxTable> tables = queryApi.query(
-        "from(bucket: \"" + bucket + "\")\n" +
-            "  |> range(start: 0)\n" +
-            "  |> filter(fn: (r) => r.devicePropertyId == \"" + devicePropertyId.id() + "\")\n" +
-            "  |> filter(fn: (r) => r.deviceId == \"" + devicePropertyId.deviceId().id() + "\")\n" +
-            "  |> filter(fn: (r) => r.deviceType == \"" + devicePropertyId.deviceId().type().getTypeName() + "\")\n" +
-            "  |> filter(fn: (r) => r._measurement == \"" + devicePropertyValueType.getTypeName() + "\")\n" +
-            "  |> filter(fn: (r) => r._field == \"" + VALUE_FIELD_NAME + "\")\n" + "  |> last()");
+    List<FluxTable> tables;
+    String query = "from(bucket: \"" + bucket + "\")\n" +
+        "  |> range(start: 0)\n" +
+        "  |> filter(fn: (r) => r.devicePropertyId == \"" + devicePropertyId.id() + "\")\n" +
+        "  |> filter(fn: (r) => r.deviceId == \"" + devicePropertyId.deviceId().id() + "\")\n" +
+        "  |> filter(fn: (r) => r.deviceType == \"" + devicePropertyId.deviceId().type().getTypeName() + "\")\n" +
+        "  |> filter(fn: (r) => r._measurement == \"" + devicePropertyValueType.getTypeName() + "\")\n" +
+        "  |> filter(fn: (r) => r._field == \"" + VALUE_FIELD_NAME + "\")\n" +
+        "  |> last()";
+    try {
+      log.trace(query);
+      tables = queryApi.query(query);
+    } catch (InfluxException e) {
+      log.error("failed to read latest value: {}", query, e);
+      return Optional.empty();
+    }
 
     if (tables.isEmpty()) {
       return Optional.empty();
@@ -149,16 +165,29 @@ public class InfluxDb2DeviceStateRepository implements DevicePropertyValueReposi
 
   @Override
   public Optional<OffsetDateTime> lastTimeValueMatched(DevicePropertyId devicePropertyId, DevicePropertyValueType devicePropertyValueType, Object value) {
-    List<FluxTable> tables = queryApi.query(
-        "from(bucket: \"" + bucket + "\")\n" +
-            "  |> range(start: 0)\n" +
-            "  |> filter(fn: (r) => r.devicePropertyId == \"" + devicePropertyId.id() + "\")\n" +
-            "  |> filter(fn: (r) => r.deviceId == \"" + devicePropertyId.deviceId().id() + "\")\n" +
-            "  |> filter(fn: (r) => r.deviceType == \"" + devicePropertyId.deviceId().type().getTypeName() + "\")\n" +
-            "  |> filter(fn: (r) => r._measurement == \"" + devicePropertyValueType.getTypeName() + "\")\n" +
-            "  |> filter(fn: (r) => r._field == \"" + VALUE_FIELD_NAME + "\")\n" +
-            "  |> filter(fn: (r) => r._value == \"" + value + "\")\n" +
-            "  |> last()");
+    List<FluxTable> tables;
+    String query = "from(bucket: \"" + bucket + "\")\n" +
+        "  |> range(start: 0)\n" +
+        "  |> filter(fn: (r) => r.devicePropertyId == \"" + devicePropertyId.id() + "\")\n" +
+        "  |> filter(fn: (r) => r.deviceId == \"" + devicePropertyId.deviceId().id() + "\")\n" +
+        "  |> filter(fn: (r) => r.deviceType == \"" + devicePropertyId.deviceId().type().getTypeName() + "\")\n" +
+        "  |> filter(fn: (r) => r._measurement == \"" + devicePropertyValueType.getTypeName() + "\")\n" +
+        "  |> filter(fn: (r) => r._field == \"" + VALUE_FIELD_NAME + "\")\n";
+    if (value instanceof Boolean b) {
+      query += "  |> filter(fn: (r) => r._value == " + b.toString().toLowerCase() + ")\n";
+    } else if (value instanceof Number n) {
+      query += "  |> filter(fn: (r) => r._value == " + n + ")\n";
+    } else {
+      query += "  |> filter(fn: (r) => r._value == \"" + value.toString() + "\")\n";
+    }
+    query += "  |> last()";
+    try {
+      tables = queryApi.query(query);
+    } catch (
+        InfluxException e) {
+      log.error("failed to read last time value matched: {}", query, e);
+      return Optional.empty();
+    }
 
     if (tables.isEmpty()) {
       return Optional.empty();
@@ -168,8 +197,13 @@ public class InfluxDb2DeviceStateRepository implements DevicePropertyValueReposi
     if (records.isEmpty()) {
       return Optional.empty();
     }
+
     FluxRecord record = records.getFirst();
-    return Optional.of(requireNonNull(record.getTime()).atOffset(UTC));
+    return Optional.of(
+
+        requireNonNull(record.getTime()).
+
+            atOffset(UTC));
   }
 
   @Override
