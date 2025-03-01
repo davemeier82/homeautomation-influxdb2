@@ -22,12 +22,12 @@ import io.github.davemeier82.homeautomation.core.repositories.DeviceRepository;
 import io.github.davemeier82.homeautomation.influxdb2.device.InfluxDb2DeviceTypeFactory;
 import io.github.davemeier82.homeautomation.spring.core.HomeAutomationCoreAutoConfiguration;
 import io.github.davemeier82.homeautomation.spring.core.HomeAutomationCorePersistenceAutoConfiguration;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -39,30 +39,28 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 @Configuration
 @AutoConfigureBefore(HomeAutomationCoreAutoConfiguration.class)
 @AutoConfigureAfter(HomeAutomationCorePersistenceAutoConfiguration.class)
+@EnableConfigurationProperties(InfluxDb2Properties.class)
 public class HomeAutomationInfluxDb2AutoConfiguration {
 
   @Bean
   @ConditionalOnProperty(prefix = "homeautomation.influxdb2", name = "url")
-  InfluxDBClient influxDBClient(@Value("${homeautomation.influxdb2.url}") String url,
-                                @Value("${homeautomation.influxdb2.token}") char[] token,
-                                @Value("${homeautomation.influxdb2.organization}") String organization,
-                                @Value("${homeautomation.influxdb2.bucket}") String bucket
+  InfluxDBClient influxDBClient(InfluxDb2Properties influxDb2Properties
   ) {
-    return InfluxDBClientFactory.create(url, token, organization, bucket);
+    return InfluxDBClientFactory.create(influxDb2Properties.getUrl(), influxDb2Properties.getToken(), influxDb2Properties.getOrganization(), influxDb2Properties.getBucket());
   }
-  
+
   @Bean
   @ConditionalOnBean({InfluxDBClient.class, DeviceRepository.class})
   @Primary
-  InfluxDb2DeviceStateRepository influxDb2DeviceStateRepository(InfluxDBClient influxDBClient, @Value("${homeautomation.influxdb2.bucket}") String bucket, @Lazy DeviceRepository deviceRepository) {
-    return new InfluxDb2DeviceStateRepository(influxDBClient, bucket, deviceRepository);
+  InfluxDb2DeviceStateRepository influxDb2DeviceStateRepository(InfluxDBClient influxDBClient, InfluxDb2Properties influxDb2Properties, @Lazy DeviceRepository deviceRepository) {
+    return new InfluxDb2DeviceStateRepository(influxDBClient, influxDb2Properties.getBucket(), deviceRepository);
   }
 
   @Bean
   @ConditionalOnBean(InfluxDBClient.class)
-  TaskScheduler influxDb2TaskScheduler(@Value("${homeautomation.influxdb2.task-scheduler.pool-size:3}") int poolSize) {
+  TaskScheduler influxDb2TaskScheduler(InfluxDb2Properties influxDb2Properties) {
     ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
-    threadPoolTaskScheduler.setPoolSize(poolSize);
+    threadPoolTaskScheduler.setPoolSize(influxDb2Properties.getTaskScheduler().getPoolSize());
     threadPoolTaskScheduler.setThreadNamePrefix("influxDb2TaskScheduler");
     return threadPoolTaskScheduler;
   }
