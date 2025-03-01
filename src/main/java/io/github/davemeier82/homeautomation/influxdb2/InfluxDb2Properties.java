@@ -21,20 +21,12 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 @ConfigurationProperties("homeautomation.influxdb2")
 public class InfluxDb2Properties {
-  private final String url;
-  private final char[] token;
-  private final String organization;
-  private final String bucket;
   @NestedConfigurationProperty
-  private final TaskSchedulerProperties taskScheduler;
-
-  public InfluxDb2Properties(String url, char[] token, String organization, String bucket, TaskSchedulerProperties taskScheduler) {
-    this.url = url;
-    this.token = token;
-    this.organization = organization;
-    this.bucket = bucket;
-    this.taskScheduler = taskScheduler;
-  }
+  private final TaskSchedulerProperties taskScheduler = new TaskSchedulerProperties();
+  private String url;
+  private char[] token;
+  private String organization;
+  private String bucket;
 
   public String getUrl() {
     return url;
@@ -52,6 +44,22 @@ public class InfluxDb2Properties {
     return bucket;
   }
 
+  public void setUrl(String url) {
+    this.url = url;
+  }
+
+  public void setToken(char[] token) {
+    this.token = token;
+  }
+
+  public void setOrganization(String organization) {
+    this.organization = organization;
+  }
+
+  public void setBucket(String bucket) {
+    this.bucket = bucket;
+  }
+
   public TaskSchedulerProperties getTaskScheduler() {
     return taskScheduler;
   }
@@ -59,12 +67,12 @@ public class InfluxDb2Properties {
   public static class TaskSchedulerProperties {
     private int poolSize = 3;
 
-    public TaskSchedulerProperties(int poolSize) {
-      this.poolSize = poolSize;
-    }
-
     public int getPoolSize() {
       return poolSize;
+    }
+
+    public void setPoolSize(int poolSize) {
+      this.poolSize = poolSize;
     }
   }
 }
