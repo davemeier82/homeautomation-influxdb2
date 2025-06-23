@@ -20,7 +20,7 @@
     <parent>
         <groupId>io.github.davemeier82.homeautomation</groupId>
         <artifactId>homeautomation-parent</artifactId>
-        <version>0.6.4</version>
+        <version>0.6.5</version>
     </parent>
 
     <artifactId>homeautomation-influxdb2</artifactId>
@@ -55,7 +55,7 @@
     </issueManagement>
 
     <properties>
-        <homeautomation-spring-core.version>0.6.4</homeautomation-spring-core.version>
+        <homeautomation-spring-core.version>0.6.5</homeautomation-spring-core.version>
         <influxdb-client-java.version>7.2.0</influxdb-client-java.version>
     </properties>
 
